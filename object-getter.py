@@ -33,16 +33,27 @@ def async_fetch(*, list_of_objects, concurrency_limit, tag_type, dict_to_check):
             if test_soup.find(tag_type, dict_to_check):
                 the_object.response_text = r.text
             else:
+                the_object.response_text = 'Soup test failed'
                 raise ValueError(f'Soup test failed for {the_object.url}')
+
+            # TODO write object to CSV when it passes the soup test
 
     async def gather_object_blocks(list_of_objects):
         object_blocks = [list_of_objects[i:i + concurrency_limit]
                          for i in range(0, len(list_of_objects), concurrency_limit)]
         async with aiohttp.ClientSession():
             for sub_block in object_blocks:
-                await asyncio.gather(
-                    *[fetch(the_object) for the_object in sub_block])
-
+                try:
+                    await asyncio.gather(
+                        *[fetch(the_object) for the_object in sub_block])
+                    # TODO Add try/except to each object, so if it fails, it'll
+                    # continue to the next object rather than hoping all the other
+                    # elements have finished.
+                    # Video: https://www.loom.com/share/165a7f636eb9413a9b2e5a3f9e1d1bb5
+                    # Gist: https://gist.github.com/lancejohnson/beb3107ace8516d89149dc1a23fc9d77
+                except Exception as e:
+                    print(f'Continuing. The problem was {e}')
+                    continue
     asyncio.run(gather_object_blocks(list_of_objects))
 
 
