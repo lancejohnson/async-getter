@@ -1,6 +1,5 @@
 import aiohttp
 import asyncio
-from bs4 import BeautifulSoup
 import csv
 import httpx
 import os
@@ -27,23 +26,16 @@ def async_fetch(*, list_of_objects, concurrency_limit, tag_type, dict_to_check):
         async with httpx.AsyncClient() as client:
             r = await client.get(SCRAPERAPI_URL, timeout=60, params=params)
             the_object.response_text = r.text
-            return r.text
 
     async def gather_object_blocks(list_of_objects):
         object_blocks = [list_of_objects[i:i + concurrency_limit]
                          for i in range(0, len(list_of_objects), concurrency_limit)]
         async with aiohttp.ClientSession():
-            soups = []
             for sub_block in object_blocks:
-                responses = await asyncio.gather(
+                await asyncio.gather(
                     *[fetch(the_object) for the_object in sub_block])
-                soups.extend([BeautifulSoup(resp, 'html.parser')
-                              for resp in responses])
-            return soups
 
-    test_list = []
-    test_list.extend(asyncio.run(gather_object_blocks(list_of_objects)))
-    return(test_list)
+    asyncio.run(gather_object_blocks(list_of_objects))
 
 
 if __name__ == "__main__":
@@ -56,7 +48,7 @@ if __name__ == "__main__":
 
     tag_type = 'script'
     dict_check = {'data-zrr-shared-data-key': 'mobileSearchPageStore'}
-    test = async_fetch(
+    async_fetch(
         list_of_objects=zipcodes[:2], concurrency_limit=10, tag_type=tag_type, dict_to_check=dict_check)
     import pdb
     pdb.set_trace()
