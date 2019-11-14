@@ -14,39 +14,35 @@ class Zipcode:
     def __repr__(self):
         return self.name
 
-# def async_fetch(*, list_of_objects, concurrency_limit, tag_type, dict_to_check):
 
-import aiohttp
-import asyncio
-from bs4 import BeautifulSoup
-import httpx
-import os
+def async_fetch(*, list_of_objects, concurrency_limit, tag_type, dict_to_check):
+    async def fetch(url):
 
-CON_LIMIT = 10
+        SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
+        SCRAPERAPI_URL = 'http://api.scraperapi.com'
+        params = {
+            'api_key': SCRAPER_API_KEY,
+            'url': url
+        }
+        async with httpx.AsyncClient() as client:
+            r = await client.get(SCRAPERAPI_URL, timeout=60, params=params)
+            return r.text
 
+    async def gather_object_blocks(list_of_objects):
+        object_blocks = [list_of_objects[i:i + concurrency_limit]
+                         for i in range(0, len(list_of_objects), concurrency_limit)]
+        async with aiohttp.ClientSession():
+            soups = []
+            for sub_block in object_blocks:
+                responses = await asyncio.gather(
+                    *[fetch(the_object.url) for the_object in sub_block])
+                soups.extend([BeautifulSoup(resp, 'html.parser')
+                              for resp in responses])
+            return soups
 
-async def fetch(url):
-    SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
-    SCRAPERAPI_URL = 'http://api.scraperapi.com'
-    params = {
-        'api_key': SCRAPER_API_KEY,
-        'url': url
-    }
-    async with httpx.AsyncClient() as client:
-        r = await client.get(SCRAPERAPI_URL, timeout=60, params=params)
-        return r.text
-
-
-async def gather_object_blocks(list_of_objects):
-    object_blocks = [list_of_objects[i:i+CON_LIMIT]
-                          for i in range(0, len(list_of_objects), CON_LIMIT)]
-    async with aiohttp.ClientSession():
-        soups = []
-        for sub_block in object_blocks:
-            responses = await asyncio.gather(
-                *[fetch(the_object.url) for the_object in sub_block])
-            soups.extend([BeautifulSoup(resp, 'html.parser') for resp in responses])
-        return soups
+    test_list = []
+    test_list.extend(asyncio.run(gather_object_blocks(list_of_objects)))
+    return(test_list)
 
 
 if __name__ == "__main__":
@@ -59,7 +55,9 @@ if __name__ == "__main__":
 
     paginated_url_blocks = [["https://www.zillow.com/delray-beach-FL-33446/sold/house_type/?searchQueryState={'mapZoom': 13, 'filterState': {'isForSaleByAgent': {'value': False}, 'isForSaleByOwner': {'value': False}, 'isNewConstruction': {'value': False}, 'isForSaleForeclosure': {'value': False}, 'isComingSoon': {'value': False}, 'isAuction': {'value': False}, 'isPreMarketForeclosure': {'value': False}, 'isPreMarketPreForeclosure': {'value': False}, 'isMakeMeMove': {'value': False}, 'isRecentlySold': {'value': True}, 'isCondo': {'value': False}, 'isMultiFamily': {'value': False}, 'isManufactured': {'value': False}, 'isLotLand': {'value': False}, 'isTownhouse': {'value': False}, 'isApartment': {'value': False}, 'price': {'min': 2000001}}, 'isListVisible': True, 'isMapVisible': False, 'mapBounds': {'west': -80.229613, 'east': -80.146376, 'south': 26.423853, 'north': 26.483953}, 'regionSelection': [{'regionId': 72612, 'regionType': 7}], 'pagination': {'currentPage': 1}}"]]
 
-    soups = []
-
-    soups.extend(asyncio.run(gather_object_blocks(zipcodes[:1])))
-    import pdb; pdb.set_trace()
+    tag_type = 'script'
+    dict_check = {'data-zrr-shared-data-key': 'mobileSearchPageStore'}
+    test = async_fetch(
+        list_of_objects=zipcodes[:2], concurrency_limit=10, tag_type=tag_type, dict_to_check=dict_check)
+    import pdb
+    pdb.set_trace()
