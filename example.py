@@ -77,5 +77,11 @@ if __name__ == "__main__":
     out_file = '/Users/work/Dropbox/Projects/Working Data/flipfind/test.pkl'
     async_fetch(
         object_list=zipcodes[:2], con_limit=10, tag_type=tag_type, dict_to_check=dict_check, out_file=out_file)
+
+    in_file = out_file
+
+    with open(in_file, 'rb') as input:
+        test_objects = pickle.load(input)
+
     import pdb
     pdb.set_trace()

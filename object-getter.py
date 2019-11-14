@@ -8,6 +8,9 @@ import pickle
 
 
 def async_fetch(*, object_list, con_limit, tag_type, dict_to_check, out_file):
+    '''
+    Objects must have url parameter to work
+    '''
     @retry(stop=stop_after_attempt(5))
     async def fetch(the_object):
 
