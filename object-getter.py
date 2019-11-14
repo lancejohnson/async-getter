@@ -5,6 +5,7 @@ import csv
 from tenacity import retry, stop_after_attempt
 import httpx
 import os
+import pickle
 
 
 class Zipcode:
@@ -16,7 +17,7 @@ class Zipcode:
         return self.name
 
 
-def async_fetch(*, list_of_objects, concurrency_limit, tag_type, dict_to_check):
+def async_fetch(*, object_list, con_limit, tag_type, dict_to_check, out_file):
     @retry(stop=stop_after_attempt(5))
     async def fetch(the_object):
 
@@ -38,9 +39,9 @@ def async_fetch(*, list_of_objects, concurrency_limit, tag_type, dict_to_check):
 
             # TODO write object to CSV when it passes the soup test
 
-    async def gather_object_blocks(list_of_objects):
-        object_blocks = [list_of_objects[i:i + concurrency_limit]
-                         for i in range(0, len(list_of_objects), concurrency_limit)]
+    async def gather_object_blocks(object_list):
+        object_blocks = [object_list[i:i + con_limit]
+                         for i in range(0, len(object_list), con_limit)]
         async with aiohttp.ClientSession():
             for sub_block in object_blocks:
                 try:
@@ -54,7 +55,13 @@ def async_fetch(*, list_of_objects, concurrency_limit, tag_type, dict_to_check):
                 except Exception as e:
                     print(f'Continuing. The problem was {e}')
                     continue
-    asyncio.run(gather_object_blocks(list_of_objects))
+
+    def save_object(obj, filename):
+        with open(filename, 'wb') as output:  # Overwrites any existing file.
+            pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
+
+    asyncio.run(gather_object_blocks(object_list))
+    save_object(object_list, out_file)
 
 
 if __name__ == "__main__":
@@ -67,7 +74,8 @@ if __name__ == "__main__":
 
     tag_type = 'script'
     dict_check = {'data-zrr-shared-data-key': 'mobileSearchPageStore'}
+    out_file = '/Users/work/Dropbox/Projects/Working Data/flipfind/test.pkl'
     async_fetch(
-        list_of_objects=zipcodes[:2], concurrency_limit=10, tag_type=tag_type, dict_to_check=dict_check)
+        object_list=zipcodes[:2], con_limit=10, tag_type=tag_type, dict_to_check=dict_check, out_file=out_file)
     import pdb
     pdb.set_trace()
