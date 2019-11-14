@@ -37,14 +37,14 @@ async def fetch(url):
         return r.text
 
 
-async def gather_url_blocks(urls):
-    url_blocks = [urls[i:i+CON_LIMIT]
-                          for i in range(0, len(urls), CON_LIMIT)]
+async def gather_object_blocks(list_of_objects):
+    object_blocks = [list_of_objects[i:i+CON_LIMIT]
+                          for i in range(0, len(list_of_objects), CON_LIMIT)]
     async with aiohttp.ClientSession():
         soups = []
-        for sub_block in url_blocks:
+        for sub_block in object_blocks:
             responses = await asyncio.gather(
-                *[fetch(url) for url in sub_block])
+                *[fetch(the_object.url) for the_object in sub_block])
             soups.extend([BeautifulSoup(resp, 'html.parser') for resp in responses])
         return soups
 
@@ -61,5 +61,5 @@ if __name__ == "__main__":
 
     soups = []
 
-    soups.extend(asyncio.run(gather_url_blocks(paginated_url_blocks)))
-    print(soups)
+    soups.extend(asyncio.run(gather_object_blocks(zipcodes[:1])))
+    import pdb; pdb.set_trace()
