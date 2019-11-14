@@ -1,10 +1,20 @@
 import aiohttp
 import asyncio
 from bs4 import BeautifulSoup
+import csv
 from tenacity import retry, stop_after_attempt
 import httpx
 import os
 import pickle
+
+
+class Zipcode:
+    def __init__(self, *, values, keys, name):
+        self.__dict__ = dict(zip(keys, values))
+        self.name = name
+
+    def __repr__(self):
+        return self.name
 
 
 def async_fetch(*, object_list, con_limit, tag_type, dict_to_check, out_file):
@@ -52,3 +62,20 @@ def async_fetch(*, object_list, con_limit, tag_type, dict_to_check, out_file):
 
     asyncio.run(gather_object_blocks(object_list))
     save_object(object_list, out_file)
+
+
+if __name__ == "__main__":
+    with open('/Users/work/Dropbox/Projects/Working Data/flipfind/zillow_urls_florida.csv', encoding='utf-8-sig') as f:
+        data = list(csv.reader(f))
+        zipcodes = [Zipcode(values=row,
+                            keys=data[0],
+                            name=f'{row[2]}-{row[0]}')
+                    for i, row in enumerate(data[1:])]
+
+    tag_type = 'script'
+    dict_check = {'data-zrr-shared-data-key': 'mobileSearchPageStore'}
+    out_file = '/Users/work/Dropbox/Projects/Working Data/flipfind/test.pkl'
+    async_fetch(
+        object_list=zipcodes[:2], con_limit=10, tag_type=tag_type, dict_to_check=dict_check, out_file=out_file)
+    import pdb
+    pdb.set_trace()
