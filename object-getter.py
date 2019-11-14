@@ -22,6 +22,8 @@ from bs4 import BeautifulSoup
 import httpx
 import os
 
+CON_LIMIT = 10
+
 
 async def fetch(url):
     SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
@@ -35,12 +37,14 @@ async def fetch(url):
         return r.text
 
 
-async def get_serps_response(paginated_urls):
+async def gather_url_blocks(urls):
+    url_blocks = [urls[i:i+CON_LIMIT]
+                          for i in range(0, len(urls), CON_LIMIT)]
     async with aiohttp.ClientSession():
         soups = []
-        for serp_url_block in paginated_urls:
+        for sub_block in url_blocks:
             responses = await asyncio.gather(
-                *[fetch(url) for url in serp_url_block])
+                *[fetch(url) for url in sub_block])
             soups.extend([BeautifulSoup(resp, 'html.parser') for resp in responses])
         return soups
 
@@ -53,11 +57,9 @@ if __name__ == "__main__":
                             name=f'{row[2]}-{row[0]}')
                     for i, row in enumerate(data[1:])]
 
-    import pdb; pdb.set_trace()
-
     paginated_url_blocks = [["https://www.zillow.com/delray-beach-FL-33446/sold/house_type/?searchQueryState={'mapZoom': 13, 'filterState': {'isForSaleByAgent': {'value': False}, 'isForSaleByOwner': {'value': False}, 'isNewConstruction': {'value': False}, 'isForSaleForeclosure': {'value': False}, 'isComingSoon': {'value': False}, 'isAuction': {'value': False}, 'isPreMarketForeclosure': {'value': False}, 'isPreMarketPreForeclosure': {'value': False}, 'isMakeMeMove': {'value': False}, 'isRecentlySold': {'value': True}, 'isCondo': {'value': False}, 'isMultiFamily': {'value': False}, 'isManufactured': {'value': False}, 'isLotLand': {'value': False}, 'isTownhouse': {'value': False}, 'isApartment': {'value': False}, 'price': {'min': 2000001}}, 'isListVisible': True, 'isMapVisible': False, 'mapBounds': {'west': -80.229613, 'east': -80.146376, 'south': 26.423853, 'north': 26.483953}, 'regionSelection': [{'regionId': 72612, 'regionType': 7}], 'pagination': {'currentPage': 1}}"]]
 
     soups = []
 
-    soups.extend(asyncio.run(get_serps_response(paginated_url_blocks)))
+    soups.extend(asyncio.run(gather_url_blocks(paginated_url_blocks)))
     print(soups)
