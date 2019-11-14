@@ -1,6 +1,8 @@
 import aiohttp
 import asyncio
+from bs4 import BeautifulSoup
 import csv
+from tenacity import retry, stop_after_attempt
 import httpx
 import os
 
@@ -15,6 +17,7 @@ class Zipcode:
 
 
 def async_fetch(*, list_of_objects, concurrency_limit, tag_type, dict_to_check):
+    @retry(stop=stop_after_attempt(5))
     async def fetch(the_object):
 
         SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
@@ -25,7 +28,12 @@ def async_fetch(*, list_of_objects, concurrency_limit, tag_type, dict_to_check):
         }
         async with httpx.AsyncClient() as client:
             r = await client.get(SCRAPERAPI_URL, timeout=60, params=params)
-            the_object.response_text = r.text
+
+            test_soup = BeautifulSoup(r.text, 'html.parser')
+            if test_soup.find(tag_type, dict_to_check):
+                the_object.response_text = r.text
+            else:
+                raise ValueError(f'Soup test failed for {the_object.url}')
 
     async def gather_object_blocks(list_of_objects):
         object_blocks = [list_of_objects[i:i + concurrency_limit]
