@@ -30,8 +30,6 @@ def async_fetch(*, object_list, con_limit, tag_type, dict_to_check, out_file):
                 the_object.response_text = 'Soup test failed'
                 raise ValueError(f'Soup test failed for {the_object.url}')
 
-            # TODO write object to CSV when it passes the soup test
-
     async def gather_object_blocks(object_list):
         object_blocks = [object_list[i:i + con_limit]
                          for i in range(0, len(object_list), con_limit)]
